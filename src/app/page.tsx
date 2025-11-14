@@ -94,7 +94,15 @@ export default function MedicationTracker() {
     return () => clearInterval(interval)
   }, [medications, notificationsEnabled])
 
-  const requestNotificationPermission = async () => {
+  const toggleNotifications = async () => {
+    if (notificationsEnabled) {
+      // Desativar alarmes
+      setNotificationsEnabled(false)
+      toast.info("Alarmes desativados")
+      return
+    }
+
+    // Ativar alarmes - solicitar permissão
     if (!("Notification" in window)) {
       toast.error("Seu navegador não suporta notificações")
       return
@@ -103,9 +111,9 @@ export default function MedicationTracker() {
     const permission = await Notification.requestPermission()
     if (permission === "granted") {
       setNotificationsEnabled(true)
-      toast.success("Notificações ativadas!")
+      toast.success("Alarmes ativados! Você receberá notificações nos horários configurados.")
     } else {
-      toast.error("Permissão de notificação negada")
+      toast.error("Permissão de notificação negada. Ative nas configurações do navegador.")
     }
   }
 
@@ -221,7 +229,7 @@ export default function MedicationTracker() {
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
-                onClick={notificationsEnabled ? () => setNotificationsEnabled(false) : requestNotificationPermission}
+                onClick={toggleNotifications}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 text-sm sm:text-base ${
                   notificationsEnabled
                     ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
