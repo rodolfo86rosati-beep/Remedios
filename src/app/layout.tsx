@@ -20,6 +20,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Remédio na Hora",
   description: "Acompanhe sua medicação com alarmes e lembretes inteligentes",
+  manifest: "/manifest.json",
+  themeColor: "#3b82f6",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Remédio na Hora",
+  },
 };
 
 export default function RootLayout({
@@ -31,6 +38,12 @@ export default function RootLayout({
     <html lang="pt-BR">
       <head>
         <Script src="/lasy-bridge.js" strategy="beforeInteractive" />
+        <link rel="icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Remédio na Hora" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

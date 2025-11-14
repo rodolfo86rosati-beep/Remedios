@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Pill, Clock, Check, X, Bell, BellOff, Trash2, Calendar } from "lucide-react"
+import { Plus, Pill, Clock, Check, X, Bell, BellOff, Trash2, Calendar, Download } from "lucide-react"
 import { toast } from "sonner"
 
 interface Medication {
@@ -28,6 +28,8 @@ export default function MedicationTracker() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [showInstallButton, setShowInstallButton] = useState(false)
 
   // Form states
   const [newMedName, setNewMedName] = useState("")
@@ -44,6 +46,24 @@ export default function MedicationTracker() {
     // Check notification permission
     if ("Notification" in window && Notification.permission === "granted") {
       setNotificationsEnabled(true)
+    }
+
+    // Listen for PWA install prompt
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setShowInstallButton(true)
+    }
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+
+    // Check if already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setShowInstallButton(false)
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
     }
   }, [])
 
@@ -93,6 +113,25 @@ export default function MedicationTracker() {
     checkReminders() // Check immediately
     return () => clearInterval(interval)
   }, [medications, notificationsEnabled])
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      toast.info("O app já está instalado ou seu navegador não suporta instalação")
+      return
+    }
+
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+
+    if (outcome === "accepted") {
+      toast.success("App instalado com sucesso! 🎉")
+      setShowInstallButton(false)
+    } else {
+      toast.info("Instalação cancelada")
+    }
+
+    setDeferredPrompt(null)
+  }
 
   const toggleNotifications = async () => {
     if (notificationsEnabled) {
@@ -227,7 +266,18 @@ export default function MedicationTracker() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+              {showInstallButton && (
+                <button
+                  onClick={handleInstallClick}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Instalar App</span>
+                  <span className="sm:hidden">Instalar</span>
+                </button>
+              )}
+
               <button
                 onClick={toggleNotifications}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 text-sm sm:text-base ${
@@ -506,6 +556,15 @@ export default function MedicationTracker() {
             </div>
           )}
         </div>
+
+        {/* Floating Add Button - Visible on mobile when scrolled */}
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="fixed bottom-6 right-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 z-50 md:hidden"
+          aria-label="Adicionar medicamento"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
       </div>
     </div>
   )
