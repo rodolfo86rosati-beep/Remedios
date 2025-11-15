@@ -30,6 +30,7 @@ export default function MedicationTracker() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallButton, setShowInstallButton] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   // Form states
   const [newMedName, setNewMedName] = useState("")
@@ -38,6 +39,7 @@ export default function MedicationTracker() {
 
   // Load medications from localStorage
   useEffect(() => {
+    setMounted(true)
     const saved = localStorage.getItem("medications")
     if (saved) {
       setMedications(JSON.parse(saved))
@@ -69,10 +71,10 @@ export default function MedicationTracker() {
 
   // Save medications to localStorage
   useEffect(() => {
-    if (medications.length > 0) {
+    if (medications.length > 0 && mounted) {
       localStorage.setItem("medications", JSON.stringify(medications))
     }
-  }, [medications])
+  }, [medications, mounted])
 
   // Update current time every minute
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function MedicationTracker() {
 
   // Check for medication reminders
   useEffect(() => {
-    if (!notificationsEnabled) return
+    if (!notificationsEnabled || !mounted) return
 
     const checkReminders = () => {
       const now = new Date()
@@ -98,7 +100,7 @@ export default function MedicationTracker() {
           if (time === currentTimeStr && !med.taken[today]) {
             new Notification(`⏰ Hora do medicamento!`, {
               body: `${med.name} - ${med.dosage}`,
-              icon: "/icon.svg",
+              icon: "/icon-192.png",
               tag: med.id + time,
             })
             toast.info(`Hora de tomar: ${med.name}`, {
@@ -112,7 +114,7 @@ export default function MedicationTracker() {
     const interval = setInterval(checkReminders, 60000)
     checkReminders() // Check immediately
     return () => clearInterval(interval)
-  }, [medications, notificationsEnabled])
+  }, [medications, notificationsEnabled, mounted])
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
@@ -120,17 +122,22 @@ export default function MedicationTracker() {
       return
     }
 
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
+    try {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
 
-    if (outcome === "accepted") {
-      toast.success("App instalado com sucesso! 🎉")
-      setShowInstallButton(false)
-    } else {
-      toast.info("Instalação cancelada")
+      if (outcome === "accepted") {
+        toast.success("App instalado com sucesso! 🎉")
+        setShowInstallButton(false)
+      } else {
+        toast.info("Instalação cancelada")
+      }
+
+      setDeferredPrompt(null)
+    } catch (error) {
+      console.error("Erro ao instalar:", error)
+      toast.error("Erro ao tentar instalar o app")
     }
-
-    setDeferredPrompt(null)
   }
 
   const toggleNotifications = async () => {
@@ -241,6 +248,33 @@ export default function MedicationTracker() {
   }
 
   const upcomingMeds = getUpcomingMedications()
+
+  // Render placeholder durante SSR para evitar hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
+                  <Pill className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    MedTracker
+                  </h1>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    Carregando...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
